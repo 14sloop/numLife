@@ -57,10 +57,10 @@ def train_tokenizer():
     assert tokenizer.token_to_id("</s>") == 2
 
     # 保存tokenizer
-    tokenizer_dir = "../model/minimind_tokenizer"
+    tokenizer_dir = "../model/numlife_tokenizer"
     os.makedirs(tokenizer_dir, exist_ok=True)
     tokenizer.save(os.path.join(tokenizer_dir, "tokenizer.json"))
-    tokenizer.model.save("../model/minimind_tokenizer")
+    tokenizer.model.save("../model/numlife_tokenizer")
 
     # 手动创建配置文件
     config = {
@@ -104,7 +104,7 @@ def train_tokenizer():
         "spaces_between_special_tokens": False,
         "tokenizer_class": "PreTrainedTokenizerFast",
         "unk_token": "<unk>",
-        "chat_template": "{% if messages[0]['role'] == 'system' %}{% set system_message = messages[0]['content'] %}{{ '<s>system\\n' + system_message + '</s>\\n' }}{% else %}{{ '<s>system\\n你是 MiniMind，是一个有用的人工智能助手。</s>\\n' }}{% endif %}{% for message in messages %}{% set content = message['content'] %}{% if message['role'] == 'user' %}{{ '<s>user\\n' + content + '</s>\\n<s>assistant\\n' }}{% elif message['role'] == 'assistant' %}{{ content + '</s>' + '\\n' }}{% endif %}{% endfor %}"
+        "chat_template": "{% if messages[0]['role'] == 'system' %}{% set system_message = messages[0]['content'] %}{{ '<s>system\\n' + system_message + '</s>\\n' }}{% else %}{{ '<s>system\\n你是 numlife，是一个有用的人工智能助手。</s>\\n' }}{% endif %}{% for message in messages %}{% set content = message['content'] %}{% if message['role'] == 'user' %}{{ '<s>user\\n' + content + '</s>\\n<s>assistant\\n' }}{% elif message['role'] == 'assistant' %}{{ content + '</s>' + '\\n' }}{% endif %}{% endfor %}"
     }
 
     # 保存配置文件
@@ -118,7 +118,7 @@ def eval_tokenizer():
     from transformers import AutoTokenizer
 
     # 加载预训练的tokenizer
-    tokenizer = AutoTokenizer.from_pretrained("../model/minimind_tokenizer")
+    tokenizer = AutoTokenizer.from_pretrained("../model/numlife_tokenizer")
 
     messages = [
         {"role": "system", "content": "你是一个优秀的聊天机器人，总是给我正确的回应！"},

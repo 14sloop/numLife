@@ -6,7 +6,7 @@ import numpy as np
 import streamlit as st
 import torch
 
-st.set_page_config(page_title="MiniMind", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="numlife", initial_sidebar_state="collapsed")
 
 # 在文件开头的 CSS 样式中修改按钮样式
 st.markdown("""
@@ -166,22 +166,22 @@ st.session_state.temperature = st.sidebar.slider("Temperature", 0.6, 1.2, 0.85, 
 
 # 模型路径映射
 MODEL_PATHS = {
-    "MiniMind2-R1 (0.1B)": ["../MiniMind2-R1", "MiniMind2-R1"],
-    "MiniMind2-Small-R1 (0.02B)": ["../MiniMind2-Small-R1", "MiniMind2-Small-R1"],
-    "MiniMind2 (0.1B)": ["../MiniMind2", "MiniMind2"],
-    "MiniMind2-MoE (0.15B)": ["../MiniMind2-MoE", "MiniMind2-MoE"],
-    "MiniMind2-Small (0.02B)": ["../MiniMind2-Small", "MiniMind2-Small"],
-    "MiniMind-V1 (0.1B)": ["../minimind-v1", "MiniMind-V1"],
-    "MiniMind-V1-MoE (0.1B)": ["../minimind-v1-moe", "MiniMind-V1-MoE"],
-    "MiniMind-V1-Small (0.02B)": ["../minimind-v1-small", "MiniMind-V1-Small"],
+    "numlife2-R1 (0.1B)": ["../numlife2-R1", "numlife2-R1"],
+    "numlife2-Small-R1 (0.02B)": ["../numlife2-Small-R1", "numlife2-Small-R1"],
+    "numlife2 (0.1B)": ["../numlife2", "numlife2"],
+    "numlife2-MoE (0.15B)": ["../numlife2-MoE", "numlife2-MoE"],
+    "numlife2-Small (0.02B)": ["../numlife2-Small", "numlife2-Small"],
+    "numlife-V1 (0.1B)": ["../numlife-v1", "numlife-V1"],
+    "numlife-V1-MoE (0.1B)": ["../numlife-v1-moe", "numlife-V1-MoE"],
+    "numlife-V1-Small (0.02B)": ["../numlife-v1-small", "numlife-V1-Small"],
 }
 
-selected_model = st.sidebar.selectbox('Models', list(MODEL_PATHS.keys()), index=2)  # 默认选择 MiniMind2
+selected_model = st.sidebar.selectbox('Models', list(MODEL_PATHS.keys()), index=2)  # 默认选择 numlife2
 model_path = MODEL_PATHS[selected_model][0]
 
 slogan = f"Hi, I'm {MODEL_PATHS[selected_model][1]}"
 
-image_url = "https://www.modelscope.cn/api/v1/studio/gongjy/MiniMind/repo?Revision=master&FilePath=images%2Flogo2.png&View=true"
+image_url = "https://www.modelscope.cn/api/v1/studio/gongjy/numlife/repo?Revision=master&FilePath=images%2Flogo2.png&View=true"
 
 st.markdown(
     f'<div style="display: flex; flex-direction: column; align-items: center; text-align: center; margin: 0; padding: 0;">'
@@ -232,7 +232,7 @@ def main():
                 unsafe_allow_html=True)
 
     # 处理新的输入或重新生成
-    prompt = st.chat_input(key="input", placeholder="给 MiniMind 发送消息")
+    prompt = st.chat_input(key="input", placeholder="给 numlife 发送消息")
 
     # 检查是否需要重新生成
     if hasattr(st.session_state, 'regenerate') and st.session_state.regenerate:

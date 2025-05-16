@@ -3,7 +3,7 @@ from typing import List
 
 
 class LMConfig(PretrainedConfig):
-    model_type = "minimind"
+    model_type = "numlife"
 
     def __init__(
             self,

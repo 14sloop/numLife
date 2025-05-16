@@ -9,23 +9,50 @@ import torch
 from sklearn.model_selection import train_test_split
 import os
 import ast
+from pathlib import Path
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 class PretrainDataset(Dataset):
-    def __init__(self, data_path, tokenizer, max_length=512):
+    def __init__(self, data_path, tokenizer, max_length=512, sample_ratio=0.01):
         super().__init__()
         self.tokenizer = tokenizer
         self.max_length = max_length
-        self.samples = self.load_data(data_path)
+        
+        # 获取数据文件的绝对路径
+        if not os.path.isabs(data_path):
+            project_root = Path(__file__).resolve().parent.parent
+            data_path = os.path.join(project_root, 'dataset', os.path.basename(data_path))
+        
+        # 加载全部数据    
+        all_samples = self.load_data(data_path)
+        print(f"从路径加载数据: {data_path}")
+        
+        # 随机采样数据
+        if sample_ratio < 1.0:
+            import random
+            random.shuffle(all_samples)
+            original_size = len(all_samples)
+            self.samples = all_samples[:int(original_size * sample_ratio)]
+            print(f"从 {original_size} 条数据中采样 {len(self.samples)} 条进行训练")
+        else:
+            self.samples = all_samples
+            print(f"加载了 {len(self.samples)} 条训练数据")
 
     def load_data(self, path):
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"找不到数据文件: {path}")
+            
         samples = []
         with open(path, 'r', encoding='utf-8') as f:
             for line_num, line in enumerate(f, 1):
-                data = json.loads(line.strip())
-                samples.append(data)
+                try:
+                    data = json.loads(line.strip())
+                    samples.append(data)
+                except json.JSONDecodeError as e:
+                    print(f"第 {line_num} 行解析失败: {e}")
+                    continue
         return samples
 
     def __len__(self):
@@ -58,8 +85,8 @@ class SFTDataset(Dataset):
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.samples = self.load_data(jsonl_path)
-        self.bos_id = tokenizer('<s>assistant\n', add_special_tokens=False).input_ids
-        self.eos_id = tokenizer('</s>\n', add_special_tokens=False).input_ids
+        self.bos_id = tokenizer('<s>assistant', add_special_tokens=False).input_ids
+        self.eos_id = tokenizer('</s>', add_special_tokens=False).input_ids
 
     def __len__(self):
         return len(self.samples)
@@ -126,8 +153,8 @@ class DPODataset(Dataset):
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.padding = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else 0
-        self.bos_id = tokenizer('<s>assistant\n', add_special_tokens=False).input_ids
-        self.eos_id = tokenizer('</s>\n', add_special_tokens=False).input_ids
+        self.bos_id = tokenizer('<s>assistant', add_special_tokens=False).input_ids
+        self.eos_id = tokenizer('</s>', add_special_tokens=False).input.ids
         with open(file_path, 'r', encoding='utf-8') as f:
             self.data = []
             for line in f:
@@ -184,7 +211,7 @@ class DPODataset(Dataset):
             if input_ids[i:i + len(self.bos_id)] == self.bos_id:
                 start = i + len(self.bos_id)
                 end = start
-                while end < len(input_ids):
+                while end < len(input.ids):
                     if input_ids[end:end + len(self.eos_id)] == self.eos_id:
                         break
                     end += 1

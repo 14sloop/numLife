@@ -14,7 +14,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from model.LMConfig import LMConfig
-from model.model import MiniMindLM
+from model.model import numlifeLM
 from model.model_lora import apply_lora, load_lora
 
 warnings.filterwarnings('ignore')
@@ -23,13 +23,13 @@ app = FastAPI()
 
 
 def init_model(args):
-    tokenizer = AutoTokenizer.from_pretrained('../model/minimind_tokenizer')
+    tokenizer = AutoTokenizer.from_pretrained('../model/numlife_tokenizer')
     if args.load == 0:
         moe_path = '_moe' if args.use_moe else ''
         modes = {0: 'pretrain', 1: 'full_sft', 2: 'rlhf', 3: 'reason'}
         ckp = f'../{args.out_dir}/{modes[args.model_mode]}_{args.dim}{moe_path}.pth'
 
-        model = MiniMindLM(LMConfig(
+        model = numlifeLM(LMConfig(
             dim=args.dim,
             n_layers=args.n_layers,
             max_seq_len=args.max_seq_len,
@@ -44,10 +44,10 @@ def init_model(args):
             load_lora(model, f'../{args.out_dir}/{args.lora_name}_{args.dim}.pth')
     else:
         model = AutoModelForCausalLM.from_pretrained(
-            './MiniMind2',
+            './numlife2',
             trust_remote_code=True
         )
-    print(f'MiniMind模型参数量: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M(illion)')
+    print(f'numlife模型参数量: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M(illion)')
     return model.eval().to(device), tokenizer
 
 
@@ -87,7 +87,7 @@ def generate_stream_response(messages, temperature, top_p, max_tokens):
                     'id': f'chatcmpl-{int(time.time())}',
                     'object': 'chat.completion.chunk',
                     'created': int(time.time()),
-                    'model': 'minimind',
+                    'model': 'numlife',
                     'choices': [{'index': 0, 'delta': {'content': delta}, 'finish_reason': None}]
                 }
                 yield f"data: {json.dumps(json_data)}\n\n"
@@ -133,7 +133,7 @@ async def chat_completions(request: ChatRequest):
                 "id": f"chatcmpl-{int(time.time())}",
                 "object": "chat.completion",
                 "created": int(time.time()),
-                "model": "minimind",
+                "model": "numlife",
                 "choices": [
                     {
                         "index": 0,
@@ -148,7 +148,7 @@ async def chat_completions(request: ChatRequest):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Server for MiniMind")
+    parser = argparse.ArgumentParser(description="Server for numlife")
     parser.add_argument('--out_dir', default='out', type=str)
     parser.add_argument('--lora_name', default='None', type=str)
     parser.add_argument('--dim', default=512, type=int)

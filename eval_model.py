@@ -1,3 +1,4 @@
+import os
 import argparse
 import random
 import time
@@ -5,21 +6,39 @@ import numpy as np
 import torch
 import warnings
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from model.model import MiniMindLM
+from model.model import numlifeLM
 from model.LMConfig import LMConfig
 from model.model_lora import *
+from pathlib import Path
+import tkinter as tk
+from tkinter import ttk, scrolledtext
 
 warnings.filterwarnings('ignore')
+# 获取项目根目录
+project_root = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+tokenizer_path = project_root / "numlife" / "model" / "numlife_tokenizer"
+if not os.path.exists(tokenizer_path):
+    raise FileNotFoundError(f"分词器路径不存在: {tokenizer_path}")
+tokenizer = AutoTokenizer.from_pretrained(str(tokenizer_path))
 
+
+# 明确验证路径
+if not os.path.exists(tokenizer_path):
+    raise FileNotFoundError(f"分词器目录不存在: {tokenizer_path}")
 
 def init_model(args):
-    tokenizer = AutoTokenizer.from_pretrained('./model/minimind_tokenizer')
+    # tokenizer = AutoTokenizer.from_pretrained('./model/numlife_tokenizer')
+    # 加载分词器（添加local_files_only确保不从网络下载）
+    tokenizer = AutoTokenizer.from_pretrained(
+        str(tokenizer_path),  # 使用 str() 转换 Path 对象
+        local_files_only=True
+    )
     if args.load == 0:
         moe_path = '_moe' if args.use_moe else ''
         modes = {0: 'pretrain', 1: 'full_sft', 2: 'rlhf', 3: 'reason'}
         ckp = f'./{args.out_dir}/{modes[args.model_mode]}_{args.dim}{moe_path}.pth'
 
-        model = MiniMindLM(LMConfig(
+        model = numlifeLM(LMConfig(
             dim=args.dim,
             n_layers=args.n_layers,
             max_seq_len=args.max_seq_len,
@@ -33,10 +52,17 @@ def init_model(args):
             apply_lora(model)
             load_lora(model, f'./{args.out_dir}/lora/{args.lora_name}_{args.dim}.pth')
     else:
-        transformers_model_path = './MiniMind2'
-        tokenizer = AutoTokenizer.from_pretrained(transformers_model_path)
-        model = AutoModelForCausalLM.from_pretrained(transformers_model_path, trust_remote_code=True)
-    print(f'MiniMind模型参数量: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M(illion)')
+        hf_model_path = project_root / "numlife2"
+        if not hf_model_path.exists():
+            raise FileNotFoundError(
+                f"HuggingFace模型目录不存在: {hf_model_path}\n"
+                f"请执行: git clone https://huggingface.co/jingyaogong/numlife2 {hf_model_path}"
+            )
+        
+        tokenizer = AutoTokenizer.from_pretrained(str(hf_model_path))
+        model = AutoModelForCausalLM.from_pretrained(str(hf_model_path), trust_remote_code=True)
+    
+    print(f'numlife模型参数量: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M(illion)')
     return model.eval().to(args.device), tokenizer
 
 
@@ -102,16 +128,16 @@ def setup_seed(seed):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Chat with MiniMind")
+    parser = argparse.ArgumentParser(description="Chat with numlife")
     parser.add_argument('--lora_name', default='None', type=str)
     parser.add_argument('--out_dir', default='out', type=str)
     parser.add_argument('--temperature', default=0.85, type=float)
     parser.add_argument('--top_p', default=0.85, type=float)
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu', type=str)
     # 此处max_seq_len（最大允许输入长度）并不意味模型具有对应的长文本的性能，仅防止QA出现被截断的问题
-    # MiniMind2-moe (145M)：(dim=640, n_layers=8, use_moe=True)
-    # MiniMind2-Small (26M)：(dim=512, n_layers=8)
-    # MiniMind2 (104M)：(dim=768, n_layers=16)
+    # numlife2-moe (145M)：(dim=640, n_layers=8, use_moe=True)
+    # numlife2-Small (26M)：(dim=512, n_layers=8)
+    # numlife2 (104M)：(dim=768, n_layers=16)
     parser.add_argument('--dim', default=512, type=int)
     parser.add_argument('--n_layers', default=8, type=int)
     parser.add_argument('--max_seq_len', default=8192, type=int)
@@ -121,10 +147,23 @@ def main():
     # 模型未经过外推微调时，在更长的上下文的chat_template时难免出现性能的明显退化，因此需要注意此处设置
     parser.add_argument('--history_cnt', default=0, type=int)
     parser.add_argument('--stream', default=True, type=bool)
-    parser.add_argument('--load', default=0, type=int, help="0: 原生torch权重，1: transformers加载")
-    parser.add_argument('--model_mode', default=1, type=int,
-                        help="0: 预训练模型，1: SFT-Chat模型，2: RLHF-Chat模型，3: Reason模型")
+    # parser.add_argument('--load', default=0, type=int, help="0: 原生torch权重，1: transformers加载")
+    # parser.add_argument('--model_mode', default=2, type=int,
+                        # help="0: 预训练模型，1: SFT-Chat模型，2: RLHF-Chat模型，3: Reason模型")
     args = parser.parse_args()
+
+    # 添加模型模式选择
+    print("请选择模型模式:")
+    print("[0] 预训练模型")
+    print("[1] SFT-Chat模型")
+    print("[2] RLHF-Chat模型")
+    print("[3] Reason模型")
+    args.model_mode = int(input("请输入模式编号 [默认2]: ") or "2")
+     # 添加加载模式选择
+    print("\n请选择模型加载方式:")
+    print("[0] 使用原生torch权重")
+    print("[1] 使用HuggingFace模型")
+    args.load = int(input("请输入加载方式 [默认1]: ") or "1")
 
     model, tokenizer = init_model(args)
 
